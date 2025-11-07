@@ -1,5 +1,5 @@
 {
-  "task": "task1_minmax",
+  "task": "task2_dot",
   "sizes": [1000, 1000000, 100000000],
   "repeats": 1,
   "find_min": true
