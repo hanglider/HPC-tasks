@@ -38,6 +38,8 @@
 └── README.md               # Текущий файл
 ```
 
+!["Пример запуска"](MPI/results/image.png " ")
+
 Результаты сохраняются в соответствующие CSV-файлы (results/taskX_*.csv),
 после чего графики можно построить с помощью:
 
@@ -54,8 +56,18 @@
 При увеличении N до 10⁷–10⁹ параллелизация даёт ускорение, однако эффективность падает с ростом числа потоков из-за синхронизации при редукции (операция min/max требует сравнения всех элементов).
 
 Графики:
+
+MPI
  
 ![](MPI/results/task1_minmax_efficiency.png " ")
+![](MPI/results/task1_minmax_speedup.png " ")
+![](MPI/results/task1_minmax_time.png " ")
+
+OpenMPß
+
+![](OpenMP/results/task1_minmax_efficiency.png " ")
+![](OpenMP/results/task1_minmax_speedup.png " ")
+![](OpenMP/results/task1_minmax_time.png " ")
 
 Время выполнения растёт почти линейно с увеличением размера задачи.
 Ускорение достигает пика при 4–8 потоках, затем выходит на плато.
