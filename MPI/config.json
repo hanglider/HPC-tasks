@@ -1,6 +1,9 @@
 {
-  "task": "task4_striped_mm",
-  "sizes": [3000, 6000, 9000],
-  "processes": [4, 9],
-  "repeats": 1
+    "task": "task5_compute_comm_balance",
+    "sizes": [100000, 200000, 300000],
+    "compute_iters": 2000000,
+    "msg_size": 100000,
+    "comm_rounds": 20,
+    "processes": [1, 2, 4, 8, 10],
+    "repeats": 3
 }

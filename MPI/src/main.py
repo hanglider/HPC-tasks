@@ -1,19 +1,28 @@
-import json, time, inspect
+import json
+import time
+import inspect
 from pathlib import Path
 import pandas as pd
 from mpi4py import MPI
-from tasks import TASKS
+
+from tasks.task5_compute_comm_balance import run_task5_compute_comm_balance
+
 
 def measure_min_time(fn, repeats: int, *args, **kwargs) -> float:
+    """Замеряет лучшее время выполнения среди repeats запусков."""
     comm = MPI.COMM_WORLD
     best = float("inf")
+
     for _ in range(repeats):
         comm.Barrier()
         t0 = time.perf_counter()
         _ = fn(*args, **kwargs)
         comm.Barrier()
-        best = min(best, time.perf_counter() - t0)
+        elapsed = time.perf_counter() - t0
+        best = min(best, elapsed)
+
     return best
+
 
 def main():
     comm = MPI.COMM_WORLD
@@ -22,6 +31,7 @@ def main():
 
     base_dir = Path(__file__).parent.parent
     cfg_path = base_dir / "config.json"
+
     if not cfg_path.exists():
         if rank == 0:
             print("❌ Не найден MPI/config.json")
@@ -29,73 +39,50 @@ def main():
 
     cfg = json.loads(cfg_path.read_text())
 
-    # ---- ЯВНО: либо "task", либо "tasks"
-    tasks_field = cfg.get("tasks")
-    task_field  = cfg.get("task")
-    if tasks_field and task_field:
-        if rank == 0:
-            print("❌ Укажи либо 'task', либо 'tasks' (не оба).")
-        return
-    if tasks_field:
-        task_names = list(tasks_field)
-    elif task_field:
-        task_names = [task_field]
-    else:
-        if rank == 0:
-            print("❌ В config.json нужно указать 'task' или 'tasks'.")
-        return
-    # ----
-
-    sizes    = cfg.get("sizes", [10_000_000])
-    repeats  = cfg.get("repeats", 3)
-    find_min = cfg.get("find_min", True)  # используется только теми задачами, кто его принимает
+    # ---- читаем конфиг ----
+    sizes        = cfg.get("sizes", [100000])
+    compute_it   = cfg.get("compute_iters", 5000000)
+    msg_size     = cfg.get("msg_size", 100000)
+    comm_rounds  = cfg.get("comm_rounds", 20)
+    repeats      = cfg.get("repeats", 3)
 
     results_dir = base_dir / "results"
     results_dir.mkdir(exist_ok=True)
 
-    for task_name in task_names:
-        if task_name not in TASKS:
-            if rank == 0:
-                print(f"❌ Неизвестная задача: {task_name}. Доступные: {', '.join(TASKS.keys())}")
-            continue
+    out_path = results_dir / "task5_compute_comm_balance.csv"
 
-        fn = TASKS[task_name]
-        fn_params = inspect.signature(fn).parameters
-        out_path = results_dir / f"{task_name}.csv"
+    # ---- запуск только задачи 5 ----
+    for n in sizes:
+        args = [compute_it, msg_size, comm_rounds]
+        kwargs = {"comm": comm}
 
-        for n in sizes:
-            # Формируем аргументы динамически под сигнатуру функции
-            args, kwargs = [], {"comm": comm}
-            if "vector_size" in fn_params or "n" in fn_params:
-                args.append(n)
-            if "find_min" in fn_params:
-                args.append(find_min)
+        # Один раз получаем значение (только rank 0)
+        value = run_task5_compute_comm_balance(*args, **kwargs)
 
-            value = fn(*args, **kwargs)
-            tsec  = measure_min_time(fn, repeats, *args, **kwargs)
+        # Измеряем лучшее время
+        tsec = measure_min_time(run_task5_compute_comm_balance,
+                                repeats,
+                                *args,
+                                **kwargs)
 
-            if rank == 0:
-                row = pd.DataFrame([{
-                    "task": task_name,
-                    "threads": procs,
-                    "size": n,
-                    "time": tsec,
-                    "result": value
-                }])
-                if out_path.exists():
-                    row.to_csv(out_path, mode="a", header=False, index=False)
-                else:
-                    row.to_csv(out_path, index=False)
+        if rank == 0:
+            row = pd.DataFrame([{
+                "task": "task5_compute_comm_balance",
+                "threads": procs,
+                "size": n,
+                "compute_iters": compute_it,
+                "msg_size": msg_size,
+                "comm_rounds": comm_rounds,
+                "time": tsec,
+                "result": value
+            }])
 
-                if isinstance(value, (int, float)):
-                    res_str = f"{value:.5f}"
-                elif value is None:
-                    res_str = "---"
-                else:
-                    # для матриц — печатаем размер
-                    res_str = f"matrix {value.shape}"
+            if out_path.exists():
+                row.to_csv(out_path, mode="a", header=False, index=False)
+            else:
+                row.to_csv(out_path, index=False)
 
-                print(f"[{procs} процессов] {task_name}, N={n}, time={tsec:.6f}s, result={res_str}")
+            print(f"[np={procs}] N={n}, time={tsec:.6f}s, result={value}")
 
 
 if __name__ == "__main__":
