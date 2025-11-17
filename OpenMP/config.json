@@ -1,8 +1,8 @@
 {
-  "task": "task2_dot",
+  "task": "task1_minmax",
   "sizes": [1000, 1000000, 100000000],
   "threads": [1, 2, 4, 8, 10],
   "repeats": 1,
   "find_min": true,
-  "output": "results/task2_dot.csv"
+  "output": "results/task1_minmax.csv"
 }
