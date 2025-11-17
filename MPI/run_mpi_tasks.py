@@ -2,16 +2,26 @@
 """
 run_mpi_tasks.py — автоматический запуск MPI-задач с перебором числа процессов.
 
-Ищет и читает конфиг MPI/config.json с полями:
+Ищет и читает конфиг MPI/config.json. Поддерживает два варианта:
+
+1) Специальный конфиг для лаунчера:
 {
-  "script": "src/main.py",     # что запускать (по умолчанию src/main.py)
-  "np": [1,2,4,8,10],          # список чисел процессов
-  "repeats": 2,                # повторов на каждое np (берётся минимальное время внутри самой задачи)
-  "extra_args": []             # доп. аргументы к mpirun (опционально), например ["--oversubscribe"]
+  "script": "src/main.py",
+  "np": [1,2,4,8],
+  "repeats": 2,
+  "extra_args": []
 }
 
-Примеры:
-  python3 run_mpi_tasks.py
+2) Твой "общий" конфиг из проекта:
+{
+  "task": "task3_pingpong",
+  "sizes": [...],
+  "processes": [2],
+  "threads": [2],
+  "repeats": 10
+}
+
+В обоих случаях будет работать.
 """
 
 import json
@@ -36,14 +46,27 @@ def load_config():
     if not CONFIG_PATH.exists():
         print("❌ Не найден MPI/config.json")
         sys.exit(1)
+
     cfg = json.loads(CONFIG_PATH.read_text())
+
     script = cfg.get("script", "src/main.py")
-    np_values = cfg.get("np", [1, 2, 4, 8])
+
+    # 1) Пытаемся взять специальное поле "np"
+    np_values = cfg.get("np")
+    # 2) Если его нет — используем твой формат "processes"
+    if np_values is None:
+        np_values = cfg.get("processes", [1, 2, 4, 8])
+
+    # на всякий случай приводим к списку
+    if isinstance(np_values, int):
+        np_values = [np_values]
+
     repeats = int(cfg.get("repeats", 1))
     extra_args = cfg.get("extra_args", [])
     if not isinstance(extra_args, list):
         print("⚠️ 'extra_args' в config.json должен быть списком строк. Игнорирую.")
         extra_args = []
+
     return script, np_values, repeats, extra_args
 
 def main():

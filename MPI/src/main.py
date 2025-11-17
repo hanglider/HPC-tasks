@@ -50,6 +50,16 @@ def main():
     repeats  = cfg.get("repeats", 3)
     find_min = cfg.get("find_min", True)  # используется только теми задачами, кто его принимает
 
+    # Если в конфиге указано требуемое число процессов — проверим
+    required_procs = cfg.get("processes")
+    if required_procs is not None:
+        if isinstance(required_procs, int):
+            required_procs = [required_procs]
+        if procs not in required_procs:
+            if rank == 0:
+                print(f"❌ Этот запуск требует процессов {required_procs}, а запущено {procs}")
+            return
+
     results_dir = base_dir / "results"
     results_dir.mkdir(exist_ok=True)
 
@@ -71,17 +81,42 @@ def main():
             if "find_min" in fn_params:
                 args.append(find_min)
 
+            # Первый вызов — получаем результат (только rank 0 обычно что-то возвращает)
             value = fn(*args, **kwargs)
-            tsec  = measure_min_time(fn, repeats, *args, **kwargs)
+
+            # Измеряем минимальное время
+            tsec = measure_min_time(fn, repeats, *args, **kwargs)
 
             if rank == 0:
-                row = pd.DataFrame([{
-                    "task": task_name,
-                    "threads": procs,
-                    "size": n,
-                    "time": tsec,
-                    "result": value
-                }])
+                
+
+
+                # спец-логика для ping-pong (task3)
+                if task_name == "task3_pingpong":
+                    # ВОТ ТАК ПРАВИЛЬНО:
+                    # time = latency (из value: avg_time)
+                    # result не нужен → ставим пусто
+                    rec = {
+                        "task": task_name,
+                        "threads": procs,
+                        "size": n,
+                        "time": value,    # <- самое важное
+                        "result": ""      # просто пусто
+                    }
+                else:
+                    rec = {
+                        "task": task_name,
+                        "threads": procs,
+                        "size": n,
+                        "time": tsec,
+                        "result": value
+                    }
+
+                row = pd.DataFrame([rec])
+
+
+
+
                 if out_path.exists():
                     row.to_csv(out_path, mode="a", header=False, index=False)
                 else:
