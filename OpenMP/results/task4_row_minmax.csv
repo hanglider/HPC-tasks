@@ -1,0 +1,16 @@
+task,threads,size,time,result
+task4_row_minmax,1,100,3.5e-05,-876.44
+task4_row_minmax,1,1000,0.003021,-987.632
+task4_row_minmax,1,10000,0.15737,-998.04
+task4_row_minmax,2,100,2.8e-05,-876.44
+task4_row_minmax,2,1000,0.001288,-987.632
+task4_row_minmax,2,10000,0.135665,-998.04
+task4_row_minmax,4,100,3.5e-05,-876.44
+task4_row_minmax,4,1000,0.001175,-987.632
+task4_row_minmax,4,10000,0.123922,-998.04
+task4_row_minmax,8,100,4.4e-05,-876.44
+task4_row_minmax,8,1000,0.001204,-987.632
+task4_row_minmax,8,10000,0.120872,-998.04
+task4_row_minmax,10,100,4.1e-05,-876.44
+task4_row_minmax,10,1000,0.001208,-987.632
+task4_row_minmax,10,10000,0.122956,-998.04

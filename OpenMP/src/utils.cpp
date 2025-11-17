@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "/Users/ivan/IT/HPC-tasks/OpenMP/include/utils.h"
 
 std::vector<double> generate_vector(size_t n, double min, double max) {
     std::mt19937 gen(42); // фиксируем seed для воспроизводимости

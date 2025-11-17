@@ -2,10 +2,15 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <algorithm>
+
 #include "/Users/ivan/IT/HPC-tasks/OpenMP/include/timer.h"
-#include "utils.h"
-#include "tasks/task1_minmax.h"
+#include "/Users/ivan/IT/HPC-tasks/OpenMP/include/utils.h"
+#include "/Users/ivan/IT/HPC-tasks/OpenMP/include/utils_matrix.h"
+#include "/Users/ivan/IT/HPC-tasks/OpenMP/include/tasks/task4_row_minmax.h"
+
 #include <nlohmann/json.hpp>
+#include <omp.h>
 
 using json = nlohmann::json;
 
@@ -20,34 +25,37 @@ int main() {
     fin >> cfg;
 
     std::string task_name = cfg.value("task", "task1_minmax");
-    std::vector<size_t> sizes = cfg.value("sizes", std::vector<size_t>{1000, 100000, 10000000});
+    std::vector<size_t> sizes = cfg.value("sizes", std::vector<size_t>{1000});
     std::vector<int> threads_list = cfg.value("threads", std::vector<int>{1, 2, 4, 8});
     int repeats = cfg.value("repeats", 3);
     bool find_min = cfg.value("find_min", true);
-    std::string output_file = cfg.value("output", "results/task1_minmax.csv");
+    std::string output_file = cfg.value("output", "results/out.csv");
 
-    for (auto threads : threads_list) {
+    for (int threads : threads_list) {
         omp_set_num_threads(threads);
-        std::cout << "\n🚀 Тестирование с " << threads << (threads == 1 ? " потоком" : " потоками") << ":\n";
+        std::cout << "\n🚀 Потоки: " << threads << "\n";
 
-        for (auto size : sizes) {
-            auto data = generate_vector(size);
+        for (size_t N : sizes) {
             double best_time = 1e9;
             double result_val = 0.0;
 
             for (int r = 0; r < repeats; ++r) {
                 Timer t;
                 t.start();
-                result_val = run_task1_minmax(data, threads, find_min);
+                auto A = generate_matrix(N);
+                result_val = run_task4_row_minmax(A, N, threads);
                 double elapsed = t.stop();
                 best_time = std::min(best_time, elapsed);
             }
 
-            save_result_csv(output_file, task_name, threads, size, best_time, result_val);
+            save_result_csv(output_file, task_name, threads, N, best_time, result_val);
+
+            std::cout << "[OK] N=" << N
+                      << " time=" << best_time
+                      << " result=" << result_val << "\n";
         }
     }
 
-
-    std::cout << "Результаты сохранены в " << output_file << std::endl;
+    std::cout << "\nРезультаты сохранены в " << output_file << "\n";
     return 0;
 }

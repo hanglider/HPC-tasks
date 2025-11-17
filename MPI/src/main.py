@@ -87,7 +87,16 @@ def main():
                 else:
                     row.to_csv(out_path, index=False)
 
-                print(f"[{procs} процессов] {task_name}, N={n}, time={tsec:.6f}s, result={value:.5f}")
+                if isinstance(value, (int, float)):
+                    res_str = f"{value:.5f}"
+                elif value is None:
+                    res_str = "---"
+                else:
+                    # для матриц — печатаем размер
+                    res_str = f"matrix {value.shape}"
+
+                print(f"[{procs} процессов] {task_name}, N={n}, time={tsec:.6f}s, result={res_str}")
+
 
 if __name__ == "__main__":
     main()
