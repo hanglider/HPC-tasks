@@ -1,6 +1,6 @@
 {
   "task": "task4_striped_mm",
-  "sizes": [200, 400, 800],
-  "processes": [1, 2, 4],
+  "sizes": [3000, 6000, 9000],
+  "processes": [4, 9],
   "repeats": 1
 }

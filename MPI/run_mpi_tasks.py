@@ -1,19 +1,4 @@
 #!/usr/bin/env python3
-"""
-run_mpi_tasks.py — автоматический запуск MPI-задач с перебором числа процессов.
-
-Ищет и читает конфиг MPI/config.json с полями:
-{
-  "script": "src/main.py",     # что запускать (по умолчанию src/main.py)
-  "np": [1,2,4,8,10],          # список чисел процессов
-  "repeats": 2,                # повторов на каждое np (берётся минимальное время внутри самой задачи)
-  "extra_args": []             # доп. аргументы к mpirun (опционально), например ["--oversubscribe"]
-}
-
-Примеры:
-  python3 run_mpi_tasks.py
-"""
-
 import json
 import shutil
 import subprocess
@@ -24,7 +9,6 @@ BASE_DIR = Path(__file__).parent
 CONFIG_PATH = BASE_DIR / "config.json"
 
 def which_mpi() -> str:
-    """Выбрать mpirun или mpiexec (что найдётся в PATH)."""
     for exe in ("mpirun", "mpiexec"):
         path = shutil.which(exe)
         if path:
@@ -36,14 +20,27 @@ def load_config():
     if not CONFIG_PATH.exists():
         print("❌ Не найден MPI/config.json")
         sys.exit(1)
+
     cfg = json.loads(CONFIG_PATH.read_text())
+
     script = cfg.get("script", "src/main.py")
-    np_values = cfg.get("np", [1, 2, 4, 8])
+
+    # 1) если есть np — используем его
+    np_values = cfg.get("np")
+    # 2) если np нет — используем processes
+    if np_values is None:
+        np_values = cfg.get("processes", [1, 2, 4, 8])
+
+    # привести к списку
+    if isinstance(np_values, int):
+        np_values = [np_values]
+
     repeats = int(cfg.get("repeats", 1))
     extra_args = cfg.get("extra_args", [])
     if not isinstance(extra_args, list):
         print("⚠️ 'extra_args' в config.json должен быть списком строк. Игнорирую.")
         extra_args = []
+
     return script, np_values, repeats, extra_args
 
 def main():
