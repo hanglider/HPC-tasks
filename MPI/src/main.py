@@ -1,15 +1,14 @@
 import json
 import time
-import inspect
 from pathlib import Path
 import pandas as pd
 from mpi4py import MPI
 
-from tasks.task5_compute_comm_balance import run_task5_compute_comm_balance
+from tasks.task6_matrix_send_modes import run_task6_matrix_send_modes
 
 
 def measure_min_time(fn, repeats: int, *args, **kwargs) -> float:
-    """Замеряет лучшее время выполнения среди repeats запусков."""
+    """Замеряет лучшее время выполнения среди repeats."""
     comm = MPI.COMM_WORLD
     best = float("inf")
 
@@ -40,49 +39,48 @@ def main():
     cfg = json.loads(cfg_path.read_text())
 
     # ---- читаем конфиг ----
-    sizes        = cfg.get("sizes", [100000])
-    compute_it   = cfg.get("compute_iters", 5000000)
-    msg_size     = cfg.get("msg_size", 100000)
-    comm_rounds  = cfg.get("comm_rounds", 20)
-    repeats      = cfg.get("repeats", 3)
+    sizes   = cfg.get("sizes", [600])
+    modes   = cfg.get("modes", ["send", "ssend", "rsend", "bsend"])
+    repeats = cfg.get("repeats", 3)
 
     results_dir = base_dir / "results"
     results_dir.mkdir(exist_ok=True)
 
-    out_path = results_dir / "task5_compute_comm_balance.csv"
+    out_path = results_dir / "task6_matrix_send_modes.csv"
 
-    # ---- запуск только задачи 5 ----
+    # ---- запуск только задачи 6 ----
     for n in sizes:
-        args = [compute_it, msg_size, comm_rounds]
-        kwargs = {"comm": comm}
+        for mode in modes:
 
-        # Один раз получаем значение (только rank 0)
-        value = run_task5_compute_comm_balance(*args, **kwargs)
+            args = [n, mode]
+            kwargs = {"comm": comm}
 
-        # Измеряем лучшее время
-        tsec = measure_min_time(run_task5_compute_comm_balance,
-                                repeats,
-                                *args,
-                                **kwargs)
+            # 1) Один раз запускаем и получаем значение (rank 0)
+            value = run_task6_matrix_send_modes(*args, **kwargs)
 
-        if rank == 0:
-            row = pd.DataFrame([{
-                "task": "task5_compute_comm_balance",
-                "threads": procs,
-                "size": n,
-                "compute_iters": compute_it,
-                "msg_size": msg_size,
-                "comm_rounds": comm_rounds,
-                "time": tsec,
-                "result": value
-            }])
+            # 2) Замеряем лучшее время
+            tsec = measure_min_time(run_task6_matrix_send_modes,
+                                    repeats,
+                                    *args,
+                                    **kwargs)
 
-            if out_path.exists():
-                row.to_csv(out_path, mode="a", header=False, index=False)
-            else:
-                row.to_csv(out_path, index=False)
+            # 3) Сохраняем CSV
+            if rank == 0:
+                row = pd.DataFrame([{
+                    "task": "task6_matrix_send_modes",
+                    "mode": mode,
+                    "threads": procs,
+                    "size": n,
+                    "time": tsec,
+                    "result": value
+                }])
 
-            print(f"[np={procs}] N={n}, time={tsec:.6f}s, result={value}")
+                if out_path.exists():
+                    row.to_csv(out_path, mode="a", header=False, index=False)
+                else:
+                    row.to_csv(out_path, index=False)
+
+                print(f"[np={procs}] mode={mode}, N={n}, time={tsec:.6f}s, result={value}")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,8 @@
 {
-    "task": "task5_special_matrices",
-    "matrix_type": "banded",
-    "bandwidth": 3,
-    "sizes": [500, 1000, 2000],
-    "threads": [1, 2, 4, 8],
-    "repeats": 5,
-    "output": "results/task5_banded.csv"
+    "task": "task6_schedule",
+    "sizes": [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000],
+    "threads": [1, 2, 4, 8, 10],
+    "schedule_mode": ["static", "dynamic", "guided"],
+    "repeats": 3,
+    "output": "results/task6_schedule.csv"
 }

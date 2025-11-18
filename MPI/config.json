@@ -1,9 +1,7 @@
 {
-    "task": "task5_compute_comm_balance",
-    "sizes": [100000, 200000, 300000],
-    "compute_iters": 2000000,
-    "msg_size": 100000,
-    "comm_rounds": 20,
-    "processes": [1, 2, 4, 8, 10],
-    "repeats": 3
+  "task": "task6_matrix_send_modes",
+  "sizes": [400, 656, 800, 1056, 1200, 1456],
+  "modes": ["send", "ssend", "rsend", "bsend"],
+  "processes": [2, 4, 8],
+  "repeats": 1
 }

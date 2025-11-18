@@ -6,9 +6,7 @@
 
 #include "/Users/ivan/IT/HPC-tasks/OpenMP/include/timer.h"
 #include "/Users/ivan/IT/HPC-tasks/OpenMP/include/utils.h"
-#include "/Users/ivan/IT/HPC-tasks/OpenMP/include/utils_matrix.h"
-#include "/Users/ivan/IT/HPC-tasks/OpenMP/include/utils_matrix_special.h"
-#include "/Users/ivan/IT/HPC-tasks/OpenMP/include/tasks/task5_special_matrices.h"
+#include "/Users/ivan/IT/HPC-tasks/OpenMP/include/tasks/task6_schedule.h"
 
 #include <nlohmann/json.hpp>
 #include <omp.h>
@@ -18,68 +16,54 @@ using json = nlohmann::json;
 int main() {
     std::ifstream fin("config.json");
     if (!fin.is_open()) {
-        std::cerr << "❌ Ошибка: не найден config.json\n";
+        std::cerr << "❌ Не найден config.json\n";
         return 1;
     }
 
     json cfg;
     fin >> cfg;
 
-    std::vector<size_t> sizes      = cfg.value("sizes",      std::vector<size_t>{500, 1000});
-    std::vector<int>    threads    = cfg.value("threads",    std::vector<int>{1, 2, 4, 8});
-    int repeats                   = cfg.value("repeats",    3);
-    std::string output_file       = cfg.value("output",     "results/task5_results.csv");
+    std::vector<size_t> sizes   = cfg.value("sizes",   std::vector<size_t>{200000});
+    std::vector<int> threads    = cfg.value("threads", std::vector<int>{1,2,4,8});
+    std::vector<std::string> modes = 
+        cfg.value("schedule_mode", std::vector<std::string>{"static", "dynamic", "guided"});
+    int repeats = cfg.value("repeats", 3);
 
-    std::string matrix_type       = cfg.value("matrix_type", "banded");
-    size_t bandwidth              = cfg.value("bandwidth",   3);
+    std::string output_file = cfg.value("output", "results/task6_schedule.csv");
 
-    // ------------------ запуск тестов ------------------
+    // ---- запуск тестов ----
     for (int t : threads) {
         omp_set_num_threads(t);
         std::cout << "\n🚀 Потоки: " << t << "\n";
 
         for (size_t N : sizes) {
 
-            double best_time = 1e9;
-            double result_val = 0.0;
+            for (auto& mode : modes) {
 
-            for (int r = 0; r < repeats; r++) {
-                Timer timer;
-                timer.start();
+                double best_time = 1e9;
+                double dummy = 0.0;
 
-                // ----------- генерация специальной матрицы --------------
-                std::vector<double> A;
+                for (int r = 0; r < repeats; r++) {
+                    Timer timer;
+                    timer.start();
 
-                if (matrix_type == "banded") {
-                    A = generate_banded_matrix(N, bandwidth);
-                }
-                else if (matrix_type == "lower") {
-                    A = generate_lower_triangular(N);
-                }
-                else if (matrix_type == "upper") {
-                    A = generate_upper_triangular(N);
-                }
-                else {
-                    std::cerr << "❌ Неизвестный matrix_type: " << matrix_type << "\n";
-                    return 1;
+                    dummy = run_task6_schedule(N, t, mode);
+
+                    double elapsed = timer.stop();
+                    best_time = std::min(best_time, elapsed);
                 }
 
-                result_val = run_task5_special_matrices(A, N, t);
+                save_result_csv(output_file,
+                                "task6_schedule_" + mode,
+                                t,
+                                N,
+                                best_time,
+                                dummy);
 
-                double elapsed = timer.stop();
-                best_time = std::min(best_time, elapsed);
+                std::cout << "[OK] mode=" << mode
+                          << " N=" << N
+                          << " time=" << best_time << "\n";
             }
-
-            save_result_csv(output_file, 
-                            "task5_special_matrices",
-                            t, 
-                            N, 
-                            best_time, 
-                            result_val);
-
-            std::cout << "[OK] N=" << N
-                      << " time=" << best_time
-                      << " result=" << result_val << "\n";
         }
     }
 
